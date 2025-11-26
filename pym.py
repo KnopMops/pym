@@ -17,6 +17,7 @@ class PythonManager:
         self.pym_json = self.project_dir / "pym.json"
         self.pym_lock = self.project_dir / "pym.lock"
         self.python_version = self.project_dir / ".python-version"
+        self.venv_dir = self.project_dir / ".venv"
         self.session = None
         self.cache_dir = Path.home() / ".fpk_cache"
         self.cache_dir.mkdir(exist_ok=True)
@@ -113,17 +114,28 @@ class PythonManager:
         await asyncio.gather(*tasks)
         await self.update_lock_file(all_dependencies)
 
+    def _get_pip_command(self):
+        if sys.platform == "win32":
+            venv_pip = self.venv_dir / "Scripts" / "pip.exe"
+        else:
+            venv_pip = self.venv_dir / "bin" / "pip"
+
+        if self.venv_dir.exists() and venv_pip.exists():
+            return str(venv_pip)
+        return "pip"
+
     async def install_from_pypi(self, package_name: str, version_spec: str):
         try:
+            pip_cmd = self._get_pip_command()
             if version_spec == "latest":
                 process = await asyncio.create_subprocess_exec(
-                    "pip", "install", package_name,
+                    pip_cmd, "install", package_name,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
                 )
             else:
                 process = await asyncio.create_subprocess_exec(
-                    "pip", "install", f"{package_name}{version_spec}",
+                    pip_cmd, "install", f"{package_name}{version_spec}",
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
                 )
@@ -141,9 +153,10 @@ class PythonManager:
     async def install_from_github(self, package_spec: str):
         try:
             url = package_spec[4:]
+            pip_cmd = self._get_pip_command()
 
             process = await asyncio.create_subprocess_exec(
-                "pip", "install", url,
+                pip_cmd, "install", url,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
@@ -160,8 +173,9 @@ class PythonManager:
 
     async def update_lock_file(self, dependencies: Dict[str, str]):
         try:
+            pip_cmd = self._get_pip_command()
             process = await asyncio.create_subprocess_exec(
-                "pip", "freeze",
+                pip_cmd, "freeze",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
