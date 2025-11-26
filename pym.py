@@ -214,6 +214,36 @@ class PythonManager:
             url = url[:-4]
         return url.split("/")[-1]
 
+    def create_venv(self):
+        venv_dir = self.project_dir / ".venv"
+
+        if venv_dir.exists():
+            print("ℹ️  Виртуальное окружение уже существует")
+        else:
+            python_exe = sys.executable
+            process = subprocess.run(
+                [python_exe, "-m", "venv", str(venv_dir)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+
+            if process.returncode == 0:
+                print(f"✅ Создано виртуальное окружение: {venv_dir}")
+            else:
+                print(
+                    f"❌ Ошибка создания виртуального окружения: {process.stderr.decode()}")
+                return
+
+        if sys.platform == "win32":
+            activate_script = venv_dir / "Scripts" / "activate.bat"
+            if activate_script.exists():
+                print("🔄 Активирую виртуальное окружение...")
+                activate_path = str(activate_script.resolve())
+                subprocess.Popen(
+                    f'cmd /k "{activate_path}"', shell=True, cwd=str(self.project_dir))
+            else:
+                print(f"⚠️  Скрипт активации не найден: {activate_script}")
+
 
 async def main():
     parser = argparse.ArgumentParser(description="Fast Python Package Manager")
@@ -233,6 +263,9 @@ async def main():
     add_parser.add_argument("--dev", action="store_true",
                             help="Добавить в dev зависимости")
 
+    subparsers.add_parser(
+        "venv", help="Создать и активировать виртуальное окружение")
+
     args = parser.parse_args()
 
     async with PythonManager() as fpm:
@@ -242,6 +275,8 @@ async def main():
             await fpm.install()
         elif args.command == "add":
             await fpm.add(args.packages, args.dev)
+        elif args.command == "venv":
+            fpm.create_venv()
         else:
             parser.print_help()
 

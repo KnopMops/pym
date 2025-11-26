@@ -1,9 +1,9 @@
 {
-  "name": "pym",
-  "version": "1.0.0",
-  "description": "",
-  "dependencies": {
-    "aiohttp": "latest"
-  },
-  "devDependencies": {}
+	"name": "pym",
+	"version": "2.0",
+	"description": "",
+	"dependencies": {
+		"aiohttp": "latest"
+	},
+	"devDependencies": {}
 }
